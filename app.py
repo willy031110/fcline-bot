@@ -55,8 +55,8 @@ def callback():
 def handle_location_message(event):
     lat = event.message.latitude
     lng = event.message.longitude
-    restaurant = search_nearby_restaurant(lat, lng)
     for i in range(1,11):
+        restaurant = search_nearby_restaurant(lat, lng)
         if restaurant:
             reply_text = f"我找到一家附近的餐廳：{restaurant['name']}，地址：{restaurant['address']}"
         else:
