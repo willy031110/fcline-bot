@@ -61,7 +61,7 @@ def handle_location_message(event):
             reply_text = f"我找到一家附近的餐廳：{restaurant['name']}，地址：{restaurant['address']}"
         else:
             reply_text = "抱歉，附近沒有找到餐廳"
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
 
 def search_nearby_restaurant(lat, lng):
