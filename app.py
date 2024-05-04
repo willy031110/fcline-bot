@@ -7,7 +7,10 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import *
-
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, LocationMessage
+import requests
+import random
 
 #======這裡是呼叫的檔案內容=====
 from message import *
@@ -27,6 +30,7 @@ static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
 line_bot_api = LineBotApi('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU=')
 # Channel Secret
 handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
+GOOGLE_MAPS_API_KEY = 'AIzaSyD5sX433QilH8IVyjPiIpqqzJAy_dZrLvE'
 
 
 # 監聽所有來自 /callback 的 Post Request
@@ -46,6 +50,33 @@ def callback():
 
 
 # 處理訊息
+
+@handler.add(MessageEvent, message=LocationMessage)
+def handle_location_message(event):
+    lat = event.message.latitude
+    lng = event.message.longitude
+    restaurant = search_nearby_restaurant(lat, lng)
+    if restaurant:
+        reply_text = f"我找到一家附近的餐廳：{restaurant['name']}，地址：{restaurant['address']}"
+    else:
+        reply_text = "抱歉，附近沒有找到餐廳"
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+
+def search_nearby_restaurant(lat, lng):
+    url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius=1000&type=restaurant&key={GOOGLE_MAPS_API_KEY}"
+    response = requests.get(url)
+    data = response.json()
+    if 'results' in data and len(data['results']) > 0:
+        restaurant = random.choice(data['results'])
+        name = restaurant.get('name', 'Unknown')
+        address = restaurant.get('vicinity', 'Unknown')
+        return {'name': name, 'address': address}
+    else:
+        return None
+
+if __name__ == "__main__":
+    app.run(debug=True)
+    
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     msg = event.message.text
