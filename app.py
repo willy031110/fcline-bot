@@ -56,11 +56,13 @@ def handle_location_message(event):
     lat = event.message.latitude
     lng = event.message.longitude
     restaurant = search_nearby_restaurant(lat, lng)
-    if restaurant:
-        reply_text = f"我找到一家附近的餐廳：{restaurant['name']}，地址：{restaurant['address']}"
-    else:
-        reply_text = "抱歉，附近沒有找到餐廳"
+    for i in range(1,11):
+        if restaurant:
+            reply_text = f"我找到一家附近的餐廳：{restaurant['name']}，地址：{restaurant['address']}"
+        else:
+            reply_text = "抱歉，附近沒有找到餐廳"
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+
 
 def search_nearby_restaurant(lat, lng):
     url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius=1000&type=restaurant&key={GOOGLE_MAPS_API_KEY}"
