@@ -55,14 +55,12 @@ def callback():
 def handle_location_message(event):
     lat = event.message.latitude
     lng = event.message.longitude
-    for i in range(1,11):
-        restaurant = search_nearby_restaurant(lat, lng)
-        if restaurant:
-            reply_text = f"我找到一家附近的餐廳：{restaurant['name']}，地址：{restaurant['address']}"
-        else:
-            reply_text = "抱歉，附近沒有找到餐廳"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-
+    restaurant = search_nearby_restaurant(lat, lng)
+    if restaurant:
+        reply_text = f"{restaurant['image_url']}我找到一家附近的餐廳：{restaurant['name']}，地址：{restaurant['address']}"
+    else:
+        reply_text = "抱歉，附近沒有找到餐廳"
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
 def search_nearby_restaurant(lat, lng):
     url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius=1000&type=restaurant&key={GOOGLE_MAPS_API_KEY}"
@@ -72,7 +70,14 @@ def search_nearby_restaurant(lat, lng):
         restaurant = random.choice(data['results'])
         name = restaurant.get('name', 'Unknown')
         address = restaurant.get('vicinity', 'Unknown')
-        return {'name': name, 'address': address}
+        if restaurant.get("photos") is None:
+            image_url= None
+        else:
+            photo_referance= restaurant["photos"][0]["photo_referance"]
+            photo_width=restaurant["photos"][0]["width"]
+            image_url="https://maps.googleapis.com/maps/api/place/photo?key={}&photoreference={}&maxwidth={}".format(GOOGLE_MAPS_API_KEY,photo_referance,photo_width)
+            
+        return {'name': name, 'address': address,'image_url':image_url}
     else:
         return None
 
