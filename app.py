@@ -53,10 +53,14 @@ def callback():
     body = request.get_data(as_text=True)
     try:
         handler.handle(body, signature)
+    except InvalidSignatureError:
+        print("Invalid signature. Please check your channel access token/channel secret.")
+        abort(400)
     except Exception as e:
-        print(e)
+        print(f"Exception: {e}")
         abort(400)
     return 'OK'
+
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
