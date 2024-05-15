@@ -67,14 +67,9 @@ def search_nearby_restaurant(lat, lng):
         restaurant = random.choice(data['results'])
         name = restaurant.get('name', 'Unknown')
         address = restaurant.get('vicinity', 'Unknown')
-        if restaurant.get("photos") is None:
-            image_url= None
-        else:
-            photo_referance= restaurant["photos"][0]["photo_referance"]
-            photo_width=restaurant["photos"][0]["width"]
-            image_url="https://maps.googleapis.com/maps/api/place/photo?key={}&photoreference={}&maxwidth={}".format(GOOGLE_MAPS_API_KEY,photo_referance,photo_width)
+        
             
-        return {'name': name, 'address': address,'image_url':image_url}
+        return {'name': name, 'address': address,}
     else:
         return None
 
