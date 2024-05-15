@@ -3,6 +3,7 @@ import requests
 from linebot import WebhookHandler, LineBotApi
 from linebot.models import TextSendMessage, TemplateSendMessage, CarouselTemplate, CarouselColumn, MessageAction
 from flask import Flask, request, abort
+from linebot.models import MessageEvent, TextMessage
 
 app = Flask(__name__)
 
