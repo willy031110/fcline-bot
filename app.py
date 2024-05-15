@@ -6,7 +6,7 @@ from linebot import (
 from linebot.exceptions import (
     InvalidSignatureError
 )
-from linebot.models import *
+from linebot.models import*
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, LocationMessage
 import requests
@@ -32,7 +32,6 @@ line_bot_api = LineBotApi('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSou
 handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
 GOOGLE_MAPS_API_KEY = 'AIzaSyD5sX433QilH8IVyjPiIpqqzJAy_dZrLvE'
 
-
 # 監聽所有來自 /callback 的 Post Request
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -50,7 +49,6 @@ def callback():
 
 
 # 處理訊息
-
 @handler.add(MessageEvent, message=LocationMessage)
 def handle_location_message(event):
     lat = event.message.latitude
@@ -61,7 +59,6 @@ def handle_location_message(event):
     else:
         reply_text = "抱歉，附近沒有找到餐廳"
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-
 def search_nearby_restaurant(lat, lng):
     url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius=1000&type=restaurant&key={GOOGLE_MAPS_API_KEY}"
     response = requests.get(url)
@@ -83,8 +80,9 @@ def search_nearby_restaurant(lat, lng):
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
+ 
+ 
+    
 def handle_location_message(event):
     lat = event["message"]["latitude"]
     lng = event["message"]["longitude"]
@@ -105,7 +103,7 @@ def reply_message(reply_token, message):
     # 回覆訊息給使用者
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
+        "Authorization": f"Bearer {line_bot_api}"
     }
     payload = {
         "replyToken": reply_token,
@@ -121,13 +119,18 @@ def reply_message(reply_token, message):
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
+    
+    
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    lat = event.message.latitude
+    lng = event.message.longitude
     msg = event.message.text
     if '最新合作廠商' in msg:
         message = imagemap_message()
+        line_bot_api.reply_message(event.reply_token, message)
+    elif '隨機推薦餐廳'in msg:
+        ##message = radomrestaurant(GOOGLE_MAPS_API_KEY,lat, lng)
         line_bot_api.reply_message(event.reply_token, message)
     elif '最新活動訊息' in msg:
         message = buttons_message()
