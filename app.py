@@ -55,7 +55,7 @@ def handle_location_message(event):
     lng = event.message.longitude
     restaurant = search_nearby_restaurant(lat, lng)
     if restaurant:
-        reply_text = f"{restaurant['image_url']}我找到一家附近的餐廳：{restaurant['name']}，地址：{restaurant['address']}"
+        reply_text = f"我找到一家附近的餐廳：{restaurant['name']}，地址：{restaurant['address']}"
     else:
         reply_text = "抱歉，附近沒有找到餐廳"
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
@@ -66,19 +66,13 @@ def search_nearby_restaurant(lat, lng):
     if 'results' in data and len(data['results']) > 0:
         restaurant = random.choice(data['results'])
         name = restaurant.get('name', 'Unknown')
-        address = restaurant.get('vicinity', 'Unknown')
-        
-            
+        address = restaurant.get('vicinity', 'Unknown')  
         return {'name': name, 'address': address,}
     else:
         return None
 
 if __name__ == "__main__":
     app.run(debug=True)
- 
- 
-    
-
     
     
 @handler.add(MessageEvent, message=TextMessage)
