@@ -83,42 +83,7 @@ if __name__ == "__main__":
  
  
     
-def handle_location_message(event):
-    lat = event["message"]["latitude"]
-    lng = event["message"]["longitude"]
-    nearby_restaurants = get_nearby_restaurants(lat, lng)
-    reply_message(event["replyToken"], nearby_restaurants)
 
-def get_nearby_restaurants(lat, lng):
-    # 使用 Google Maps API 查詢附近餐廳
-    url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius=1500&type=restaurant&key={GOOGLE_MAPS_API_KEY}"
-    response = requests.get(url)
-    data = response.json()
-    restaurants = []
-    for place in data["results"]:
-        restaurants.append(place["name"])
-    return restaurants
-
-def reply_message(reply_token, message):
-    # 回覆訊息給使用者
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {line_bot_api}"
-    }
-    payload = {
-        "replyToken": reply_token,
-        "messages": [
-            {
-                "type": "text",
-                "text": "\n".join(message)
-            }
-        ]
-    }
-    url = "https://api.line.me/v2/bot/message/reply"
-    requests.post(url, headers=headers, json=payload)
-
-if __name__ == "__main__":
-    app.run(debug=True)
     
     
 @handler.add(MessageEvent, message=TextMessage)
