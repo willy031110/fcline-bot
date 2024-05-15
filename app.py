@@ -64,7 +64,7 @@ def get_nearby_restaurants(lat, lng):
 def reply_carousel_message(reply_token, restaurants):
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {line_bot_api}"
+        "Authorization": f"Bearer {'ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU='}"
     }
     payload = {
         "replyToken": reply_token,
