@@ -25,12 +25,12 @@ import time
 #======python的函數庫==========
 
 app = Flask(__name__)
-static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
-# Channel Access Token
-line_bot_api = LineBotApi('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU=')
-# Channel Secret
-handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
+LINE_CHANNEL_ACCESS_TOKEN ='ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU='
 GOOGLE_MAPS_API_KEY = 'AIzaSyD5sX433QilH8IVyjPiIpqqzJAy_dZrLvE'
+
+# 初始化 LINE Bot API 和 Webhook Handler
+line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
+handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
 
 # 監聽所有來自 /callback 的 Post Request
 @app.route("/callback", methods=['POST'])
@@ -53,12 +53,13 @@ def callback():
 def handle_location_message(event):
     lat = event.message.latitude
     lng = event.message.longitude
-    restaurant = search_nearby_restaurant(lat, lng)
-    if restaurant:
-        reply_text = f"我找到一家附近的餐廳：{restaurant['name']}，地址：{restaurant['address']}"
+    nearby_restaurant = search_nearby_restaurant(lat, lng)
+    if nearby_restaurant:
+        reply_text = f"我找到一家附近的餐廳：{nearby_restaurant['name']}，地址：{nearby_restaurant['address']}"
     else:
         reply_text = "抱歉，附近沒有找到餐廳"
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+
 def search_nearby_restaurant(lat, lng):
     url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius=1000&type=restaurant&key={GOOGLE_MAPS_API_KEY}"
     response = requests.get(url)
@@ -67,24 +68,20 @@ def search_nearby_restaurant(lat, lng):
         restaurant = random.choice(data['results'])
         name = restaurant.get('name', 'Unknown')
         address = restaurant.get('vicinity', 'Unknown')  
-        return {'name': name, 'address': address,}
+        return {'name': name, 'address': address}
     else:
         return None
 
-if __name__ == "__main__":
-    app.run(debug=True)
-    
-    
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    lat = event.message.latitude
-    lng = event.message.longitude
     msg = event.message.text
     if '最新合作廠商' in msg:
         message = imagemap_message()
         line_bot_api.reply_message(event.reply_token, message)
-    elif '隨機推薦餐廳'in msg:
-        ##message = radomrestaurant(GOOGLE_MAPS_API_KEY,lat, lng)
+    elif '隨機推薦餐廳' in msg:
+        lat = event.source.latitude
+        lng = event.source.longitude
+        message = search_nearby_restaurant(GOOGLE_MAPS_API_KEY, lat, lng)
         line_bot_api.reply_message(event.reply_token, message)
     elif '最新活動訊息' in msg:
         message = buttons_message()
