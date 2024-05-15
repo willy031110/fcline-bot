@@ -33,92 +33,79 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
 
 # 監聽所有來自 /callback 的 Post Request
+def get_nearby_restaurants(latitude, longitude):
+    url = f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude},{longitude}&radius=500&type=restaurant&key={GOOGLE_MAPS_API_KEY}'
+    response = requests.get(url)
+    data = response.json()
+    return data.get('results', [])
+
+def format_restaurant_info(restaurant):
+    photo_url = restaurant.get('photos')[0]['photo_reference'] if restaurant.get('photos') else ''
+    name = restaurant.get('name', '')
+    address = restaurant.get('vicinity', '')
+    phone_number = restaurant.get('formatted_phone_number', '')
+    return {
+        'photo_url': f'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_url}&key={GOOGLE_MAPS_API_KEY}',
+        'name': name,
+        'address': address,
+        'phone_number': phone_number
+    }
+
+def create_carousel_template(restaurants):
+    columns = []
+    for restaurant in restaurants:
+        info = format_restaurant_info(restaurant)
+        column = CarouselColumn(
+            thumbnail_image_url=info['photo_url'],
+            title=info['name'],
+            text=info['address'],
+            actions=[
+                MessageAction(label='詳細資訊', text=f'詳細資訊: {info["name"]}'),
+            ]
+        )
+        columns.append(column)
+    return TemplateSendMessage(
+        alt_text='附近餐廳推薦',
+        template=CarouselTemplate(columns=columns)
+    )
+
 @app.route("/callback", methods=['POST'])
 def callback():
-    # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
-    # get request body as text
     body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
-    # handle webhook body
     try:
         handler.handle(body, signature)
-    except InvalidSignatureError:
+    except Exception as e:
+        print(e)
         abort(400)
     return 'OK'
 
- 
-# 處理訊息
-@handler.add(MessageEvent, message=LocationMessage)
-def handle_location_message(event):
-    lat = event.message.latitude
-    lng = event.message.longitude
-    nearby_restaurant = search_nearby_restaurant(lat, lng)
-    if nearby_restaurant:
-        reply_text = f"我找到一家附近的餐廳：{nearby_restaurant['name']}，地址：{nearby_restaurant['address']}"
-    else:
-        reply_text = "抱歉，附近沒有找到餐廳"
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-
-def search_nearby_restaurant(lat, lng):
-    url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius=1000&type=restaurant&key={GOOGLE_MAPS_API_KEY}"
-    response = requests.get(url)
-    data = response.json()
-    if 'results' in data and len(data['results']) > 0:
-        restaurant = random.choice(data['results'])
-        name = restaurant.get('name', 'Unknown')
-        address = restaurant.get('vicinity', 'Unknown')  
-        return {'name': name, 'address': address}
-    else:
-        return None
-
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    msg = event.message.text
-    if '最新合作廠商' in msg:
-        message = imagemap_message()
-        line_bot_api.reply_message(event.reply_token, message)
-    elif '隨機推薦餐廳' in msg:
-        lat = event.source.latitude
-        lng = event.source.longitude
-        message = search_nearby_restaurant(GOOGLE_MAPS_API_KEY, lat, lng)
-        line_bot_api.reply_message(event.reply_token, message)
-    elif '最新活動訊息' in msg:
-        message = buttons_message()
-        line_bot_api.reply_message(event.reply_token, message)
-    elif '註冊會員' in msg:
-        message = Confirm_Template()
-        line_bot_api.reply_message(event.reply_token, message)
-    elif '旋轉木馬' in msg:
-        message = Carousel_Template()
-        line_bot_api.reply_message(event.reply_token, message)
-    elif '圖片畫廊' in msg:
-        message = test()
-        line_bot_api.reply_message(event.reply_token, message)
-    elif '功能列表' in msg:
-        message = function_list()
-        line_bot_api.reply_message(event.reply_token, message)
-    else:
-        message = TextSendMessage(text=msg)
-        line_bot_api.reply_message(event.reply_token, message)
+    user_id = event.source.user_id
+    message_text = event.message.text
+    if message_text == '推薦附近餐廳':
+        location = event.source.location
+        if location:
+            latitude = location.latitude
+            longitude = location.longitude
+            nearby_restaurants = get_nearby_restaurants(latitude, longitude)
+            carousel_template = create_carousel_template(nearby_restaurants)
+            line_bot_api.reply_message(event.reply_token, carousel_template)
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
+    elif message_text == '隨機推薦附近餐廳':
+        location = event.source.location
+        if location:
+            latitude = location.latitude
+            longitude = location.longitude
+            nearby_restaurants = get_nearby_restaurants(latitude, longitude)
+            random_restaurant = random.choice(nearby_restaurants)
+            info = format_restaurant_info(random_restaurant)
+            text_message = f'名稱: {info["name"]}\n地址: {info["address"]}\n電話: {info["phone_number"]}'
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=text_message))
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
 
-@handler.add(PostbackEvent)
-def handle_message(event):
-    print(event.postback.data)
-
-
-@handler.add(MemberJoinedEvent)
-def welcome(event):
-    uid = event.joined.members[0].user_id
-    gid = event.source.group_id
-    profile = line_bot_api.get_group_member_profile(gid, uid)
-    name = profile.display_name
-    message = TextSendMessage(text=f'{name}歡迎加入')
-    line_bot_api.reply_message(event.reply_token, message)
-        
-        
-import os
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
-
+    app.run()
