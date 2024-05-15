@@ -1,42 +1,93 @@
 from flask import Flask, request, abort
+
 from linebot import (
     LineBotApi, WebhookHandler
 )
 from linebot.exceptions import (
     InvalidSignatureError
 )
-from linebot.models import *
+from linebot.models import*
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, LocationMessage
 import requests
+import random
+
+#======這裡是呼叫的檔案內容=====
+from message import *
+from new import *
+from Function import *
+#======這裡是呼叫的檔案內容=====
+
+#======python的函數庫==========
+import tempfile, os
+import datetime
+import time
+#======python的函數庫==========
 
 app = Flask(__name__)
-
-# 設置 LINE Bot 的存取權杖和 Google Maps API 的金鑰
-LINE_CHANNEL_ACCESS_TOKEN ='ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU='
+static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
+# Channel Access Token
+line_bot_api = LineBotApi('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU=')
+# Channel Secret
+handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
 GOOGLE_MAPS_API_KEY = 'AIzaSyD5sX433QilH8IVyjPiIpqqzJAy_dZrLvE'
 
-# 初始化 LINE Bot API 和 Webhook Handler
-line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
-
-@app.route("/callback", methods=["POST"])
+# 監聽所有來自 /callback 的 Post Request
+@app.route("/callback", methods=['POST'])
 def callback():
-    signature = request.headers["X-Line-Signature"]
+    # get X-Line-Signature header value
+    signature = request.headers['X-Line-Signature']
+    # get request body as text
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
-    
+    # handle webhook body
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
-    
-    return "OK"
+    return 'OK'
 
+ 
+# 處理訊息
 @handler.add(MessageEvent, message=LocationMessage)
 def handle_location_message(event):
     lat = event.message.latitude
     lng = event.message.longitude
+    restaurant = search_nearby_restaurant(lat, lng)
+    if restaurant:
+        reply_text = f"{restaurant['image_url']}我找到一家附近的餐廳：{restaurant['name']}，地址：{restaurant['address']}"
+    else:
+        reply_text = "抱歉，附近沒有找到餐廳"
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+def search_nearby_restaurant(lat, lng):
+    url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius=1000&type=restaurant&key={GOOGLE_MAPS_API_KEY}"
+    response = requests.get(url)
+    data = response.json()
+    if 'results' in data and len(data['results']) > 0:
+        restaurant = random.choice(data['results'])
+        name = restaurant.get('name', 'Unknown')
+        address = restaurant.get('vicinity', 'Unknown')
+        if restaurant.get("photos") is None:
+            image_url= None
+        else:
+            photo_referance= restaurant["photos"][0]["photo_referance"]
+            photo_width=restaurant["photos"][0]["width"]
+            image_url="https://maps.googleapis.com/maps/api/place/photo?key={}&photoreference={}&maxwidth={}".format(GOOGLE_MAPS_API_KEY,photo_referance,photo_width)
+            
+        return {'name': name, 'address': address,'image_url':image_url}
+    else:
+        return None
+
+if __name__ == "__main__":
+    app.run(debug=True)
+ 
+ 
+    
+def handle_location_message(event):
+    lat = event["message"]["latitude"]
+    lng = event["message"]["longitude"]
     nearby_restaurants = get_nearby_restaurants(lat, lng)
-    reply_carousel_message(event.reply_token, nearby_restaurants)
+    reply_message(event["replyToken"], nearby_restaurants)
 
 def get_nearby_restaurants(lat, lng):
     # 使用 Google Maps API 查詢附近餐廳
@@ -45,33 +96,78 @@ def get_nearby_restaurants(lat, lng):
     data = response.json()
     restaurants = []
     for place in data["results"]:
-        restaurants.append({
-            "name": place["name"],
-            "address": place.get("vicinity", "Address not available")
-        })
+        restaurants.append(place["name"])
     return restaurants
 
-def reply_carousel_message(reply_token, restaurants):
-    columns = []
-    for restaurant in restaurants:
-        column = CarouselColumn(
-            thumbnail_image_url="https://example.com/image1.jpg",
-            title=restaurant["name"],
-            text=restaurant["address"],
-            actions=[
-                URIAction(
-                    label="View on Google Maps",
-                    uri="https://www.google.com/maps/search/?api=1&query=" + restaurant["name"]
-                )
-            ]
-        )
-        columns.append(column)
-
-    carousel_template = CarouselTemplate(columns=columns)
-    template_message = TemplateSendMessage(alt_text="Nearby Restaurants", template=carousel_template)
-    
-    line_bot_api.reply_message(reply_token, template_message)
+def reply_message(reply_token, message):
+    # 回覆訊息給使用者
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {line_bot_api}"
+    }
+    payload = {
+        "replyToken": reply_token,
+        "messages": [
+            {
+                "type": "text",
+                "text": "\n".join(message)
+            }
+        ]
+    }
+    url = "https://api.line.me/v2/bot/message/reply"
+    requests.post(url, headers=headers, json=payload)
 
 if __name__ == "__main__":
     app.run(debug=True)
+    
+    
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    lat = event.message.latitude
+    lng = event.message.longitude
+    msg = event.message.text
+    if '最新合作廠商' in msg:
+        message = imagemap_message()
+        line_bot_api.reply_message(event.reply_token, message)
+    elif '隨機推薦餐廳'in msg:
+        ##message = radomrestaurant(GOOGLE_MAPS_API_KEY,lat, lng)
+        line_bot_api.reply_message(event.reply_token, message)
+    elif '最新活動訊息' in msg:
+        message = buttons_message()
+        line_bot_api.reply_message(event.reply_token, message)
+    elif '註冊會員' in msg:
+        message = Confirm_Template()
+        line_bot_api.reply_message(event.reply_token, message)
+    elif '旋轉木馬' in msg:
+        message = Carousel_Template()
+        line_bot_api.reply_message(event.reply_token, message)
+    elif '圖片畫廊' in msg:
+        message = test()
+        line_bot_api.reply_message(event.reply_token, message)
+    elif '功能列表' in msg:
+        message = function_list()
+        line_bot_api.reply_message(event.reply_token, message)
+    else:
+        message = TextSendMessage(text=msg)
+        line_bot_api.reply_message(event.reply_token, message)
+
+@handler.add(PostbackEvent)
+def handle_message(event):
+    print(event.postback.data)
+
+
+@handler.add(MemberJoinedEvent)
+def welcome(event):
+    uid = event.joined.members[0].user_id
+    gid = event.source.group_id
+    profile = line_bot_api.get_group_member_profile(gid, uid)
+    name = profile.display_name
+    message = TextSendMessage(text=f'{name}歡迎加入')
+    line_bot_api.reply_message(event.reply_token, message)
+        
+        
+import os
+if __name__ == "__main__":
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
 
