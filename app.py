@@ -11,10 +11,10 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, LocationMessage
 import tempfile, os
 import datetime
+import requests
 import time
 
 app = Flask(__name__)
-static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
 # Channel Access Token
 line_bot_api = LineBotApi('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU=')
 # Channel Secret
