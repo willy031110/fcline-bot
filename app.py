@@ -32,33 +32,6 @@ def callback():
         abort(400)
     return 'OK'
 
-@handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    user_id = event.source.user_id
-    message_text = event.message.text
-    if message_text == '推薦附近餐廳':
-        location = event.source.location
-        if location:
-            latitude = location.latitude
-            longitude = location.longitude
-            nearby_restaurants = get_nearby_restaurants(latitude, longitude)
-            carousel_template = create_carousel_template(nearby_restaurants)
-            line_bot_api.reply_message(event.reply_token, carousel_template)
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
-    elif message_text == '隨機推薦附近餐廳':
-        location = event.source.location
-        if location:
-            latitude = location.latitude
-            longitude = location.longitude
-            nearby_restaurants = get_nearby_restaurants(latitude, longitude)
-            random_restaurant = random.choice(nearby_restaurants)
-            info = format_restaurant_info(random_restaurant)
-            text_message = f'名稱: {info["name"]}\n地址: {info["address"]}\n電話: {info["phone_number"]}'
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=text_message))
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
-
 def get_nearby_restaurants(latitude, longitude):
     url = f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude},{longitude}&radius=500&type=restaurant&key={GOOGLE_MAPS_API_KEY}'
     response = requests.get(url)
@@ -95,6 +68,25 @@ def create_carousel_template(restaurants):
         template=CarouselTemplate(columns=columns)
     )
 
+@handler.add(MessageEvent, message=TextMessage)
+def handle_text_message(event):
+    user_id = event.source.user_id
+    message_text = event.message.text
+    if message_text == '推薦附近餐廳':
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
+    elif message_text == '隨機推薦附近餐廳':
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
+
+@handler.add(MessageEvent, message=LocationMessage)
+def handle_location_message(event):
+    user_id = event.source.user_id
+    latitude = event.message.latitude
+    longitude = event.message.longitude
+    nearby_restaurants = get_nearby_restaurants(latitude, longitude)
+    carousel_template = create_carousel_template(nearby_restaurants)
+    line_bot_api.reply_message(event.reply_token, carousel_template)
+
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
