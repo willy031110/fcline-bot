@@ -1,9 +1,10 @@
 import random
 import requests
 from linebot import WebhookHandler, LineBotApi
-from linebot.models import *
+from linebot.models import*
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, LocationMessage
+from linebot.models import TextSendMessage, TemplateSendMessage, CarouselTemplate, CarouselColumn, MessageAction
 from flask import Flask, request, abort
 import tempfile, os
 import datetime
@@ -57,8 +58,6 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=text_message))
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
-    else:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請輸入「推薦附近餐廳」或「隨機推薦附近餐廳」'))
 
 def get_nearby_restaurants(latitude, longitude):
     url = f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude},{longitude}&radius=500&type=restaurant&key={GOOGLE_MAPS_API_KEY}'
@@ -79,20 +78,16 @@ def format_restaurant_info(restaurant):
     }
 
 def create_carousel_template(restaurants):
-    if not restaurants:
-        return TextSendMessage(text='附近沒有找到餐廳。')
     columns = []
     for restaurant in restaurants:
         info = format_restaurant_info(restaurant)
-        thumbnail_image_url = info['photo_url'] if 'photo_url' in info else None
-        actions = [
-            MessageAction(label='詳細資訊', text=f'詳細資訊: {info["name"]}'),
-        ]
         column = CarouselColumn(
-            thumbnail_image_url=thumbnail_image_url,
+            thumbnail_image_url=info['photo_url'],
             title=info['name'],
             text=info['address'],
-            actions=actions
+            actions=[
+                MessageAction(label='詳細資訊', text=f'詳細資訊: {info["name"]}'),
+            ]
         )
         columns.append(column)
     return TemplateSendMessage(
