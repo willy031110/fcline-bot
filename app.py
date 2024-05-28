@@ -2,7 +2,7 @@ import random
 import requests
 from linebot import WebhookHandler, LineBotApi
 from linebot.models import *
-from linebot.exceptions import InvalidSignatureError
+from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from flask import Flask, request, abort
 import os
 
@@ -95,7 +95,10 @@ def handle_location_message(event):
 
         if nearby_restaurants:
             carousel_template = create_carousel_template(nearby_restaurants)
-            line_bot_api.reply_message(reply_token, carousel_template)
+            try:
+                line_bot_api.reply_message(reply_token, carousel_template)
+            except LineBotApiError as e:
+                print(f"LineBotApiError: {e.status_code}, {e.error.message}")
         else:
             line_bot_api.reply_message(reply_token, TextSendMessage(text='附近沒有找到餐廳'))
 
