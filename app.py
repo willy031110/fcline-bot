@@ -13,6 +13,9 @@ line_bot_api = LineBotApi('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSou
 handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
 GOOGLE_MAPS_API_KEY = 'AIzaSyD5sX433QilH8IVyjPiIpqqzJAy_dZrLvE'
 
+# 用來存儲用戶狀態的字典
+user_states = {}
+
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers['X-Line-Signature']
@@ -70,31 +73,43 @@ def create_carousel_template(restaurants):
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text_message(event):
     message_text = event.message.text.strip()
+    user_id = event.source.user_id
+
     if message_text == '推薦附近餐廳':
+        user_states[user_id] = '推薦附近餐廳'
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
     elif message_text == '隨機推薦附近餐廳':
+        user_states[user_id] = '隨機推薦附近餐廳'
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
+    else:
+        user_states[user_id] = None
 
 @handler.add(MessageEvent, message=LocationMessage)
 def handle_location_message(event):
     latitude = event.message.latitude
     longitude = event.message.longitude
+    user_id = event.source.user_id
     nearby_restaurants = get_nearby_restaurants(latitude, longitude)
+    
     if not nearby_restaurants:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text='找不到附近的餐廳，請稍後再試。'))
         return
 
-    message_text = event.message.text
-    if message_text == '隨機推薦附近餐廳':
+    user_state = user_states.get(user_id)
+
+    if user_state == '隨機推薦附近餐廳':
         random_restaurant = random.choice(nearby_restaurants)
         info = format_restaurant_info(random_restaurant)
         text_message = TextSendMessage(
             text=f"推薦餐廳: {info['name']}\n地址: {info['address']}\n照片: {info['photo_url']}"
         )
         line_bot_api.reply_message(event.reply_token, text_message)
-    else:
+    elif user_state == '推薦附近餐廳':
         carousel_template = create_carousel_template(nearby_restaurants)
         line_bot_api.reply_message(event.reply_token, carousel_template)
+
+    # 重置用戶狀態
+    user_states[user_id] = None
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
