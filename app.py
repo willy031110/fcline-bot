@@ -2,18 +2,15 @@ from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import *
-import os
 import requests
+import os
 
 app = Flask(__name__)
 
-# 環境變數存儲敏感信息
-LINE_CHANNEL_ACCESS_TOKEN = os.getenv('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU=')
-LINE_CHANNEL_SECRET = os.getenv('4226f38b9cd8bce4d0417d29d575f750')
-GOOGLE_MAPS_API_KEY = os.getenv('AIzaSyD5sX433QilH8IVyjPiIpqqzJAy_dZrLvE')
-
-line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler(LINE_CHANNEL_SECRET)
+# 硬編碼的敏感信息
+line_bot_api = LineBotApi('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU=')
+handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
+GOOGLE_MAPS_API_KEY = 'AIzaSyD5sX433QilH8IVyjPiIpqqzJAy_dZrLvE'
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -89,7 +86,3 @@ def handle_location_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-
-
-
-
