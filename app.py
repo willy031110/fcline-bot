@@ -8,8 +8,6 @@ import os
 
 app = Flask(__name__)
 
-# 設置日誌
-logging.basicConfig(level=logging.INFO)
 
 # 頻道訪問令牌和密鑰
 line_bot_api = LineBotApi('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU=')
