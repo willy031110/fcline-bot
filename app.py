@@ -37,6 +37,7 @@ def get_nearby_restaurants(latitude, longitude):
         response = requests.get(url)
         response.raise_for_status()  # 為不良回應引發HTTPError
         data = response.json()
+        print(f"Google Maps API 回應: {data}")
         return data.get('results', [])[:10]  # 限制返回的餐廳數量不超過10個
     except requests.RequestException as e:
         print(f"請求失敗: {e}")
@@ -124,4 +125,5 @@ def handle_location_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
 
