@@ -76,6 +76,8 @@ def handle_text_message(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
     elif message_text == '隨機推薦附近餐廳':
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
+        # 標記隨機推薦
+        line_bot_api.push_message(user_id, TextSendMessage(text='隨機'))
 
 @handler.add(MessageEvent, message=LocationMessage)
 def handle_location_message(event):
@@ -84,16 +86,13 @@ def handle_location_message(event):
     longitude = event.message.longitude
     nearby_restaurants = get_nearby_restaurants(latitude, longitude)
 
-    if '隨機' in event.message.text:
-        if nearby_restaurants:
-            random_restaurant = random.choice(nearby_restaurants)
-            carousel_template = create_carousel_template([random_restaurant])
-            line_bot_api.reply_message(event.reply_token, carousel_template)
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text='附近沒有找到餐廳'))
-    else:
-        carousel_template = create_carousel_template(nearby_restaurants)
+    # 判斷是否隨機推薦
+    if nearby_restaurants:
+        random_restaurant = random.choice(nearby_restaurants)
+        carousel_template = create_carousel_template([random_restaurant])
         line_bot_api.reply_message(event.reply_token, carousel_template)
+    else:
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='附近沒有找到餐廳'))
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
