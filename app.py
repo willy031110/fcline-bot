@@ -52,9 +52,10 @@ def create_carousel_template(restaurants):
     columns = []
     for restaurant in restaurants:
         info = format_restaurant_info(restaurant)
+        truncated_name = info['name'][:40]  # 截斷餐廳名稱，確保不超過 40 個字符
         column = CarouselColumn(
             thumbnail_image_url=info['photo_url'],
-            title=info['name'],
+            title=truncated_name,
             text=info['address'],
             actions=[
                 MessageAction(label='詳細資訊', text=f'詳細資訊: {info["name"]}')
@@ -65,6 +66,7 @@ def create_carousel_template(restaurants):
         alt_text='附近餐廳推薦',
         template=CarouselTemplate(columns=columns)
     )
+
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text_message(event):
