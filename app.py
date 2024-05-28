@@ -3,6 +3,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import *
 import requests
+import random
 import os
 
 app = Flask(__name__)
@@ -69,7 +70,9 @@ def create_carousel_template(restaurants):
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text_message(event):
     message_text = event.message.text.strip()
-    if message_text in ['推薦附近餐廳', '隨機推薦附近餐廳']:
+    if message_text == '推薦附近餐廳':
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
+    elif message_text == '隨機推薦附近餐廳':
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
 
 @handler.add(MessageEvent, message=LocationMessage)
@@ -80,8 +83,18 @@ def handle_location_message(event):
     if not nearby_restaurants:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text='找不到附近的餐廳，請稍後再試。'))
         return
-    carousel_template = create_carousel_template(nearby_restaurants)
-    line_bot_api.reply_message(event.reply_token, carousel_template)
+
+    message_text = event.message.text
+    if message_text == '隨機推薦附近餐廳':
+        random_restaurant = random.choice(nearby_restaurants)
+        info = format_restaurant_info(random_restaurant)
+        text_message = TextSendMessage(
+            text=f"推薦餐廳: {info['name']}\n地址: {info['address']}\n照片: {info['photo_url']}"
+        )
+        line_bot_api.reply_message(event.reply_token, text_message)
+    else:
+        carousel_template = create_carousel_template(nearby_restaurants)
+        line_bot_api.reply_message(event.reply_token, carousel_template)
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
