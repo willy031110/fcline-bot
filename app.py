@@ -1,27 +1,16 @@
 from flask import Flask, request, abort
-
-from linebot import (
-    LineBotApi, WebhookHandler
-)
-from linebot.exceptions import (
-    InvalidSignatureError
-)
-from linebot.models import*
+from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, LocationMessage
-import tempfile, os
-import datetime
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, LocationMessage, CarouselColumn, TemplateSendMessage, CarouselTemplate, MessageAction
 import requests
-import time
+import os
 
 app = Flask(__name__)
-# Channel Access Token
+
+# 頻道訪問令牌和密鑰
 line_bot_api = LineBotApi('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU=')
-# Channel Secret
 handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
 GOOGLE_MAPS_API_KEY = 'AIzaSyD5sX433QilH8IVyjPiIpqqzJAy_dZrLvE'
-
-
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -30,10 +19,10 @@ def callback():
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        print("Invalid signature. Please check your channel access token/channel secret.")
+        print("無效的簽名。請檢查你的頻道訪問令牌/頻道密鑰。")
         abort(400)
     except Exception as e:
-        print(f"Exception: {e}")
+        print(f"異常: {e}")
         abort(400)
     return 'OK'
 
@@ -41,18 +30,16 @@ def get_nearby_restaurants(latitude, longitude):
     url = f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude},{longitude}&radius=500&type=restaurant&key={GOOGLE_MAPS_API_KEY}'
     response = requests.get(url)
     data = response.json()
-    return data.get('results', [])[:10]  # 使用切片操作限制返回的餐廳列表不超過10個
+    return data.get('results', [])[:10]  # 限制返回的餐廳數量不超過10個
 
 def format_restaurant_info(restaurant):
-    photo_url = restaurant.get('photos')[0]['photo_reference'] if restaurant.get('photos') else ''
-    name = restaurant.get('name', '')
-    address = restaurant.get('vicinity', '')[:60]  # 對地址進行切片，確保長度不超過60個字符
-    phone_number = restaurant.get('formatted_phone_number', '')
+    photo_reference = restaurant.get('photos', [{}])[0].get('photo_reference', '')
+    name = restaurant.get('name', 'N/A')
+    address = restaurant.get('vicinity', 'N/A')[:60]  # 限制地址長度
     return {
-        'photo_url': f'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_url}&key={GOOGLE_MAPS_API_KEY}',
+        'photo_url': f'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_reference}&key={GOOGLE_MAPS_API_KEY}' if photo_reference else '',
         'name': name,
-        'address': address,
-        'phone_number': phone_number
+        'address': address
     }
 
 def create_carousel_template(restaurants):
@@ -64,7 +51,7 @@ def create_carousel_template(restaurants):
             title=info['name'],
             text=info['address'],
             actions=[
-                MessageAction(label='詳細資訊', text=f'詳細資訊: {info["name"]}'),
+                MessageAction(label='詳細資訊', text=f'詳細資訊: {info["name"]}')
             ]
         )
         columns.append(column)
@@ -75,16 +62,12 @@ def create_carousel_template(restaurants):
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text_message(event):
-    user_id = event.source.user_id
     message_text = event.message.text
-    if message_text == '推薦附近餐廳':
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
-    elif message_text == '隨機推薦附近餐廳':
+    if message_text in ['推薦附近餐廳', '隨機推薦附近餐廳']:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
 
 @handler.add(MessageEvent, message=LocationMessage)
 def handle_location_message(event):
-    user_id = event.source.user_id
     latitude = event.message.latitude
     longitude = event.message.longitude
     nearby_restaurants = get_nearby_restaurants(latitude, longitude)
