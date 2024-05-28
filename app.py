@@ -1,27 +1,22 @@
-from flask import Flask, request, abort
-
-from linebot import (
-    LineBotApi, WebhookHandler
-)
-from linebot.exceptions import (
-    InvalidSignatureError
-)
-from linebot.models import*
+import random
+import requests
+from linebot import WebhookHandler, LineBotApi
+from linebot.models import *
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, LocationMessage
+from linebot.models import TextSendMessage, TemplateSendMessage, CarouselTemplate, CarouselColumn, MessageAction
+from flask import Flask, request, abort
 import tempfile, os
 import datetime
-import requests
 import time
 
 app = Flask(__name__)
-# Channel Access Token
-line_bot_api = LineBotApi('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU=')
-# Channel Secret
-handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
+
+LINE_CHANNEL_ACCESS_TOKEN = 'ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU='
 GOOGLE_MAPS_API_KEY = 'AIzaSyD5sX433QilH8IVyjPiIpqqzJAy_dZrLvE'
 
-
+line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
+handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -41,12 +36,12 @@ def get_nearby_restaurants(latitude, longitude):
     url = f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude},{longitude}&radius=500&type=restaurant&key={GOOGLE_MAPS_API_KEY}'
     response = requests.get(url)
     data = response.json()
-    return data.get('results', [])[:10]  # 使用切片操作限制返回的餐廳列表不超過10個
+    return data.get('results', [])[:10]  # 只返回前10個餐廳
 
 def format_restaurant_info(restaurant):
     photo_url = restaurant.get('photos')[0]['photo_reference'] if restaurant.get('photos') else ''
     name = restaurant.get('name', '')
-    address = restaurant.get('vicinity', '')[:60]  # 對地址進行切片，確保長度不超過60個字符
+    address = restaurant.get('vicinity', '')[:60]  # 確保地址不超過60個字符
     phone_number = restaurant.get('formatted_phone_number', '')
     return {
         'photo_url': f'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_url}&key={GOOGLE_MAPS_API_KEY}',
@@ -88,10 +83,18 @@ def handle_location_message(event):
     latitude = event.message.latitude
     longitude = event.message.longitude
     nearby_restaurants = get_nearby_restaurants(latitude, longitude)
-    carousel_template = create_carousel_template(nearby_restaurants)
-    line_bot_api.reply_message(event.reply_token, carousel_template)
+
+    if '隨機' in event.message.text:
+        if nearby_restaurants:
+            random_restaurant = random.choice(nearby_restaurants)
+            carousel_template = create_carousel_template([random_restaurant])
+            line_bot_api.reply_message(event.reply_token, carousel_template)
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text='附近沒有找到餐廳'))
+    else:
+        carousel_template = create_carousel_template(nearby_restaurants)
+        line_bot_api.reply_message(event.reply_token, carousel_template)
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-
