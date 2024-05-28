@@ -97,7 +97,8 @@ def handle_location_message(event):
     print(f"收到位置消息: 經度={latitude}, 緯度={longitude} (來自用戶: {user_id})")
     
     nearby_restaurants = get_nearby_restaurants(latitude, longitude)
-    
+    print(f"獲取到的附近餐廳: {nearby_restaurants}")
+
     if not nearby_restaurants:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text='找不到附近的餐廳，請稍後再試。'))
         return
@@ -125,5 +126,3 @@ def handle_location_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-
-
