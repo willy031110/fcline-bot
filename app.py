@@ -1,11 +1,15 @@
+import logging
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
+from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, LocationMessage, CarouselColumn, TemplateSendMessage, CarouselTemplate, MessageAction
 import requests
 import os
 
 app = Flask(__name__)
+
+# 設置日誌
+logging.basicConfig(level=logging.INFO)
 
 # 頻道訪問令牌和密鑰
 line_bot_api = LineBotApi('ZXxMakoI5GNuejiC7Igzm1wvqw3vDxHGRlicvQPM1qizx9eqUJSouLzo1rbTZxo24IWBi0E3AP8lBSOj7SRVt0GkK5Duowbfjn/Zgn8YPHKYfxJC90NHFr8ihfry5YKOjFiNPkHv+XGPydkBv5F0UAdB04t89/1O/w1cDnyilFU=')
@@ -16,13 +20,17 @@ GOOGLE_MAPS_API_KEY = 'AIzaSyD5sX433QilH8IVyjPiIpqqzJAy_dZrLvE'
 def callback():
     signature = request.headers['X-Line-Signature']
     body = request.get_data(as_text=True)
+    logging.info(f"Request body: {body}")
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        print("無效的簽名。請檢查你的頻道訪問令牌/頻道密鑰。")
+        logging.error("無效的簽名。請檢查你的頻道訪問令牌/頻道密鑰。")
+        abort(400)
+    except LineBotApiError as e:
+        logging.error(f"LineBotApiError: {e.status_code} {e.error.message} {e.error.details}")
         abort(400)
     except Exception as e:
-        print(f"異常: {e}")
+        logging.error(f"異常: {e}")
         abort(400)
     return 'OK'
 
@@ -72,8 +80,12 @@ def handle_location_message(event):
     longitude = event.message.longitude
     nearby_restaurants = get_nearby_restaurants(latitude, longitude)
     carousel_template = create_carousel_template(nearby_restaurants)
-    line_bot_api.reply_message(event.reply_token, carousel_template)
+    try:
+        line_bot_api.reply_message(event.reply_token, carousel_template)
+    except LineBotApiError as e:
+        logging.error(f"回覆消息時出現錯誤: {e.status_code} {e.error.message} {e.error.details}")
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
