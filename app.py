@@ -3,12 +3,8 @@ import requests
 from linebot import WebhookHandler, LineBotApi
 from linebot.models import *
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, LocationMessage
-from linebot.models import TextSendMessage, TemplateSendMessage, CarouselTemplate, CarouselColumn, MessageAction
 from flask import Flask, request, abort
-import tempfile, os
-import datetime
-import time
+import os
 
 app = Flask(__name__)
 
@@ -17,6 +13,9 @@ GOOGLE_MAPS_API_KEY = 'AIzaSyD5sX433QilH8IVyjPiIpqqzJAy_dZrLvE'
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler('4226f38b9cd8bce4d0417d29d575f750')
+
+# 使用者請求資訊
+user_requests = {}
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -72,27 +71,37 @@ def create_carousel_template(restaurants):
 def handle_text_message(event):
     user_id = event.source.user_id
     message_text = event.message.text
-    if message_text == '推薦附近餐廳':
+    if message_text in ['推薦附近餐廳', '隨機推薦附近餐廳']:
+        user_requests[user_id] = {
+            'reply_token': event.reply_token,
+            'random': message_text == '隨機推薦附近餐廳'
+        }
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
-    elif message_text == '隨機推薦附近餐廳':
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
-        # 標記隨機推薦
-        line_bot_api.push_message(user_id, TextSendMessage(text='隨機'))
 
 @handler.add(MessageEvent, message=LocationMessage)
 def handle_location_message(event):
     user_id = event.source.user_id
-    latitude = event.message.latitude
-    longitude = event.message.longitude
-    nearby_restaurants = get_nearby_restaurants(latitude, longitude)
+    if user_id in user_requests:
+        request_info = user_requests[user_id]
+        reply_token = request_info['reply_token']
+        is_random = request_info['random']
 
-    # 判斷是否隨機推薦
-    if nearby_restaurants:
-        random_restaurant = random.choice(nearby_restaurants)
-        carousel_template = create_carousel_template([random_restaurant])
-        line_bot_api.reply_message(event.reply_token, carousel_template)
+        latitude = event.message.latitude
+        longitude = event.message.longitude
+        nearby_restaurants = get_nearby_restaurants(latitude, longitude)
+
+        if is_random and nearby_restaurants:
+            nearby_restaurants = [random.choice(nearby_restaurants)]
+
+        if nearby_restaurants:
+            carousel_template = create_carousel_template(nearby_restaurants)
+            line_bot_api.reply_message(reply_token, carousel_template)
+        else:
+            line_bot_api.reply_message(reply_token, TextSendMessage(text='附近沒有找到餐廳'))
+
+        del user_requests[user_id]  # 移除已處理的請求
     else:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='附近沒有找到餐廳'))
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請重新發送您的請求'))
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
