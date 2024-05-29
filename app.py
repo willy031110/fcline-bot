@@ -44,15 +44,24 @@ def get_nearby_restaurants(latitude, longitude):
         return []
 
 def format_restaurant_info(restaurant):
-    photo_reference = restaurant.get('photos')[0].get('photo_reference') if restaurant.get('photos') else ''
-    name = restaurant.get('name', '')[:40]  # 確保名稱符合限制
-    address = restaurant.get('vicinity', '')[:60]  # 限制地址長度
-    photo_url = f'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_reference}&key={GOOGLE_MAPS_API_KEY}' if photo_reference else ''
-    return {
-        'photo_url': photo_url,
-        'name': name,
-        'address': address
-    }
+    try:
+        print(f"正在格式化餐廳信息: {restaurant}")
+        photo_reference = restaurant.get('photos')[0].get('photo_reference') if restaurant.get('photos') else ''
+        name = restaurant.get('name', '')[:40]  # 確保名稱符合限制
+        address = restaurant.get('vicinity', '')[:60]  # 限制地址長度
+        photo_url = f'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_reference}&key={GOOGLE_MAPS_API_KEY}' if photo_reference else ''
+        return {
+            'photo_url': photo_url,
+            'name': name,
+            'address': address
+        }
+    except Exception as e:
+        print(f"格式化餐廳信息時出現錯誤: {e}")
+        return {
+            'photo_url': '',
+            'name': '未知餐廳',
+            'address': '未知地址'
+        }
 
 def create_carousel_template(restaurants):
     columns = []
@@ -67,10 +76,12 @@ def create_carousel_template(restaurants):
             ]
         )
         columns.append(column)
-    return TemplateSendMessage(
+    
+    template = TemplateSendMessage(
         alt_text='附近餐廳推薦',
         template=CarouselTemplate(columns=columns)
     )
+    return template
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text_message(event):
@@ -108,9 +119,12 @@ def handle_location_message(event):
 
     if user_state == '隨機推薦附近餐廳':
         random_restaurant = random.choice(nearby_restaurants)
-        carousel_template = create_carousel_template(random_restaurant)
-        print("推薦附近餐廳的 Carousel 模板已創建")
-        line_bot_api.reply_message(event.reply_token, carousel_template)
+        info = format_restaurant_info(random_restaurant)
+        text_message = TextSendMessage(
+            text=f"推薦餐廳: {info['name']}\n地址: {info['address']}\n照片: {info['photo_url']}"
+        )
+        print(f"隨機推薦餐廳: {info}")
+        line_bot_api.reply_message(event.reply_token, text_message)
     elif user_state == '推薦附近餐廳':
         carousel_template = create_carousel_template(nearby_restaurants)
         print("推薦附近餐廳的 Carousel 模板已創建")
