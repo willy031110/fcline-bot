@@ -63,7 +63,7 @@ def format_restaurant_info(restaurant):
         
         photo_reference = restaurant.get('photos')[0].get('photo_reference') if restaurant.get('photos') else ''
         name = restaurant.get('name', '')[:40]  # 確保名稱符合限制
-        address = restaurant.get('vicinity', '')[:60]  # 限制地址長度
+        address = restaurant.get('vicinity', '')[:40]  # 限制地址長度
         phone_number = details.get('formatted_phone_number', '無電話號碼')[:20]  # 限制電話號碼長度
         map_url = f'https://www.google.com/maps/search/?api=1&query=Google&query_place_id={place_id}'
         photo_url = f'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_reference}&key={GOOGLE_MAPS_API_KEY}' if photo_reference else ''
@@ -92,6 +92,8 @@ def create_carousel_template(restaurants):
     for restaurant in restaurants:
         info = format_restaurant_info(restaurant)
         text = f"{info['address']}\n電話: {info['phone_number']}"
+        if len(text) > 60:
+            text = text[:57] + '...'  # 確保總長度不超過60個字符
         column = CarouselColumn(
             thumbnail_image_url=info['photo_url'],
             title=info['name'],
@@ -159,4 +161,5 @@ def handle_location_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
 
