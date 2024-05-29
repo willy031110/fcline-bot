@@ -43,19 +43,35 @@ def get_nearby_restaurants(latitude, longitude):
         print(f"請求失敗: {e}")
         return []
 
+def get_place_details(place_id):
+    try:
+        url = f'https://maps.googleapis.com/maps/api/place/details/json?place_id={place_id}&key={GOOGLE_MAPS_API_KEY}'
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        print(f"Google Maps Place Details API 回應: {data}")
+        return data.get('result', {})
+    except requests.RequestException as e:
+        print(f"請求失敗: {e}")
+        return {}
+
 def format_restaurant_info(restaurant):
     try:
         print(f"正在格式化餐廳信息: {restaurant}")
+        place_id = restaurant.get('place_id', '')
+        details = get_place_details(place_id)
+        
         photo_reference = restaurant.get('photos')[0].get('photo_reference') if restaurant.get('photos') else ''
         name = restaurant.get('name', '')[:40]  # 確保名稱符合限制
         address = restaurant.get('vicinity', '')[:60]  # 限制地址長度
-        place_id = restaurant.get('place_id', '')
+        phone_number = details.get('formatted_phone_number', '無電話號碼')[:20]  # 限制電話號碼長度
         map_url = f'https://www.google.com/maps/search/?api=1&query=Google&query_place_id={place_id}'
         photo_url = f'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_reference}&key={GOOGLE_MAPS_API_KEY}' if photo_reference else ''
         return {
             'photo_url': photo_url,
             'name': name,
             'address': address,
+            'phone_number': phone_number,
             'map_url': map_url
         }
     except Exception as e:
@@ -64,6 +80,7 @@ def format_restaurant_info(restaurant):
             'photo_url': '',
             'name': '未知餐廳',
             'address': '未知地址',
+            'phone_number': '無電話號碼',
             'map_url': ''
         }
 
@@ -74,10 +91,11 @@ def create_carousel_template(restaurants):
     columns = []
     for restaurant in restaurants:
         info = format_restaurant_info(restaurant)
+        text = f"{info['address']}\n電話: {info['phone_number']}"
         column = CarouselColumn(
             thumbnail_image_url=info['photo_url'],
             title=info['name'],
-            text=info['address'],
+            text=text,
             actions=[
                 URIAction(label='詳細資訊', uri=info['map_url'])
             ]
@@ -141,3 +159,4 @@ def handle_location_message(event):
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+
