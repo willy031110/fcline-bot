@@ -119,12 +119,9 @@ def handle_location_message(event):
 
     if user_state == '隨機推薦附近餐廳':
         random_restaurant = random.choice(nearby_restaurants)
-        info = format_restaurant_info(random_restaurant)
-        text_message = TextSendMessage(
-            text=f"推薦餐廳: {info['name']}\n地址: {info['address']}\n照片: {info['photo_url']}"
-        )
-        print(f"隨機推薦餐廳: {info}")
-        line_bot_api.reply_message(event.reply_token, text_message)
+        carousel_template = create_carousel_template(random_restaurant)
+        print("推薦附近餐廳的 Carousel 模板已創建")
+        line_bot_api.reply_message(event.reply_token, carousel_template)
     elif user_state == '推薦附近餐廳':
         carousel_template = create_carousel_template(nearby_restaurants)
         print("推薦附近餐廳的 Carousel 模板已創建")
