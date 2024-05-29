@@ -99,11 +99,11 @@ def handle_text_message(event):
     if message_text == '推薦附近餐廳':
         user_states[user_id] = '推薦附近餐廳'
         print(f"設置用戶狀態為: {user_states[user_id]}")
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
-    elif message_text == '隨機推薦附近餐廳':
-        user_states[user_id] = '隨機推薦附近餐廳'
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請麻煩您按左下方「+」，選擇位置訊息，將您的位置分享給我謝謝！♡♡♡'))
+    elif message_text == '隨機推薦餐廳':
+        user_states[user_id] = '隨機推薦餐廳'
         print(f"設置用戶狀態為: {user_states[user_id]}")
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請分享您的位置'))
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='請麻煩您按左下方「+」，選擇位置訊息，將您的位置分享給我謝謝！♡♡♡'))
     else:
         user_states[user_id] = None
 
@@ -124,7 +124,7 @@ def handle_location_message(event):
     user_state = user_states.get(user_id)
     print(f"用戶狀態: {user_state}")
 
-    if user_state == '隨機推薦附近餐廳':
+    if user_state == '隨機推薦餐廳':
         random_restaurant = random.choice(nearby_restaurants)
         carousel_template = create_carousel_template([random_restaurant])
         print("隨機推薦餐廳的 Carousel 模板已創建")
