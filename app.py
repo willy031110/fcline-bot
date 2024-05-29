@@ -64,6 +64,9 @@ def format_restaurant_info(restaurant):
         }
 
 def create_carousel_template(restaurants):
+    if not isinstance(restaurants, list):
+        restaurants = [restaurants]
+    
     columns = []
     for restaurant in restaurants:
         info = format_restaurant_info(restaurant)
@@ -119,8 +122,8 @@ def handle_location_message(event):
 
     if user_state == '隨機推薦附近餐廳':
         random_restaurant = random.choice(nearby_restaurants)
-        carousel_template = create_carousel_template(random_restaurant)
-        print("推薦附近餐廳的 Carousel 模板已創建")
+        carousel_template = create_carousel_template([random_restaurant])
+        print("隨機推薦餐廳的 Carousel 模板已創建")
         line_bot_api.reply_message(event.reply_token, carousel_template)
     elif user_state == '推薦附近餐廳':
         carousel_template = create_carousel_template(nearby_restaurants)
