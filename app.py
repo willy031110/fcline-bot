@@ -49,18 +49,22 @@ def format_restaurant_info(restaurant):
         photo_reference = restaurant.get('photos')[0].get('photo_reference') if restaurant.get('photos') else ''
         name = restaurant.get('name', '')[:40]  # 確保名稱符合限制
         address = restaurant.get('vicinity', '')[:60]  # 限制地址長度
+        place_id = restaurant.get('place_id', '')
+        map_url = f'https://www.google.com/maps/search/?api=1&query=Google&query_place_id={place_id}'
         photo_url = f'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photo_reference}&key={GOOGLE_MAPS_API_KEY}' if photo_reference else ''
         return {
             'photo_url': photo_url,
             'name': name,
-            'address': address
+            'address': address,
+            'map_url': map_url
         }
     except Exception as e:
         print(f"格式化餐廳信息時出現錯誤: {e}")
         return {
             'photo_url': '',
             'name': '未知餐廳',
-            'address': '未知地址'
+            'address': '未知地址',
+            'map_url': ''
         }
 
 def create_carousel_template(restaurants):
@@ -75,7 +79,7 @@ def create_carousel_template(restaurants):
             title=info['name'],
             text=info['address'],
             actions=[
-                MessageAction(label='詳細資訊', text=f'詳細資訊: {info["name"]}')
+                URIAction(label='詳細資訊', uri=info['map_url'])
             ]
         )
         columns.append(column)
